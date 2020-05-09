@@ -1,7 +1,7 @@
-# dutch-smart-meter-reader Sensor
+# Dutch Smart Meter Reader
 [![hacs_badge](https://img.shields.io/badge/HACS-Custom-orange.svg)](https://github.com/custom-components/hacs) ![GitHub tag (latest by date)](https://img.shields.io/github/v/tag/hombrelab/home-assistant-dutch-smart-meter-reader) ![GitHub commit activity](https://img.shields.io/github/last-commit/hombrelab/home-assistant-dutch-smart-meter-reader)  
 
-This [dutch-smart-meter-reader]((https://github.com/hombrelab/home-assistant-dutch-smart-meter-reader)) custom component for [home-assistant](https://www.home-assistant.io) is an alternative to the 2 existing integrations:  
+This [Dutch Smart Meter Reader]((https://github.com/hombrelab/home-assistant-dutch-smart-meter-reader)) custom component for [home-assistant](https://www.home-assistant.io) is an alternative to the 2 existing integrations:  
 - [DSMR](https://www.home-assistant.io/integrations/dsmr)
 - [DSMR Reader](https://www.home-assistant.io/integrations/dsmr_reader)  
 

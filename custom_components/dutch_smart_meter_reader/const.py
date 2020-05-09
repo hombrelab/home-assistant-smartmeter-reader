@@ -12,7 +12,7 @@ UUID = "1531923f-ed21-4e72-8def-a7e900c71c8e"
 
 SW_MANUFACTURER = "Hombrelab"
 SW_NAME = "Dutch Smart Meter Reader"
-SW_VERSION = "1.5.1"
+SW_VERSION = "1.5.2"
 
 TITLE = "Home"
 
