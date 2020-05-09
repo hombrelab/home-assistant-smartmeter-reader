@@ -1,0 +1,23 @@
+{
+  "config": {
+    "abort": {
+      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
+    },
+    "error": {
+      "name_error": "This name is already in use!",
+      "connection_error": "Failed to connect MQTT (is it enabled).",
+      "variables_error": "One or more variables have not been set up (correct)."
+    },
+    "step": {
+      "user": {
+        "title": "Location",
+        "data": {
+          "dsmrversion": "DSMR Version",
+          "precision": "Precision",
+          "topic": "Topic"
+        }
+      }
+    }
+  },
+  "title": "Dutch Smart Meter Reader"
+}

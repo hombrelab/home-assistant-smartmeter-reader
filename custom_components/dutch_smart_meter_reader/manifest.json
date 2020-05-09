@@ -1,0 +1,16 @@
+{
+  "domain": "dutch_smart_meter_reader",
+  "name": "Dutch Smart Meter Reader (MQTT)",
+  "config_flow": true,
+  "documentation": "https://github.com/hombrelab/home-assistant-dutch-smart-meter-reader/",
+  "dependencies": [
+    "mqtt"
+  ],
+  "after_dependencies": [],
+  "codeowners": [
+    "@hombrelab"
+  ],
+  "requirements": [
+    "dsmr_parser==0.18"
+  ]
+}
