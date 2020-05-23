@@ -1,6 +1,6 @@
-"""
-Constants for the Dutch Smart Meter Reader component
-"""
+#  Copyright (c) 2020 Hombrelab <me@hombrelab.com>
+
+# Constants for the Dutch Smart Meter Reader component
 
 import pytz
 
@@ -12,7 +12,7 @@ UUID = "1531923f-ed21-4e72-8def-a7e900c71c8e"
 
 SW_MANUFACTURER = "Hombrelab"
 SW_NAME = "Dutch Smart Meter Reader"
-SW_VERSION = "1.5.2"
+SW_VERSION = "1.5.3"
 
 TITLE = "Home"
 

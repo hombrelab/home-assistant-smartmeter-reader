@@ -1,6 +1,6 @@
-"""
-Config flow for the Dutch Smart Meter Reader component.
-"""
+#  Copyright (c) 2020 Hombrelab <me@hombrelab.com>
+
+# Config flow for the Dutch Smart Meter Reader component.
 
 import logging
 
