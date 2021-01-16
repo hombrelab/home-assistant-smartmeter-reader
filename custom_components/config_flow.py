@@ -25,7 +25,7 @@ from .const import (
 _LOGGER = logging.getLogger(__name__)
 
 
-class DutchSmartMeterReaderConfigFlow(ConfigFlow, domain=DOMAIN):
+class SmartmeterConfigFlow(ConfigFlow, domain=DOMAIN):
     VERSION = 1
 
     CONNECTION_CLASS = config_entries.CONN_CLASS_UNKNOWN

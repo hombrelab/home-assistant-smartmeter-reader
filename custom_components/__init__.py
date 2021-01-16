@@ -65,7 +65,7 @@ async def async_unload_entry(hass: HomeAssistantType, entry: ConfigType):
     return unload_ok
 
 
-class DSMRDevice():
+class SmartmeterDevice():
     @property
     def device_info(self):
         """Return device information"""

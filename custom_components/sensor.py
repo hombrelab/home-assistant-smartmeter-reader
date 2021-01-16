@@ -14,7 +14,7 @@ from dsmr_parser import obis_references as obis_ref
 
 _LOGGER = logging.getLogger(__name__)
 
-from . import DSMRDevice
+from . import SmartmeterDevice
 
 from .const import (
     UUID,
@@ -52,7 +52,7 @@ async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry, async_a
     elements = ENTITIES
     elements += [
         [
-            'Smartmeter Reader Gas Consumption',
+            'Smartmeter Gas Consumption',
             'mdi:fire',
             gas_obis
         ],
@@ -60,12 +60,12 @@ async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry, async_a
 
     derivative_elements = [
         [
-            'Smartmeter Reader Hourly Gas Consumption',
+            'Smartmeter Hourly Gas Consumption',
             'mdi:fire',
             gas_obis
         ],
         [
-            'Smartmeter Reader Hourly Gas Last Update',
+            'Smartmeter Hourly Gas Last Update',
             'mdi:update',
             gas_obis
         ],
@@ -73,12 +73,12 @@ async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry, async_a
 
     # Generate device entities
     entities = [
-        DSMREntity(name, icon, obis, entry.data[PRECISION], telegram_specs) for name, icon, obis in elements
+        SmartmeterEntity(name, icon, obis, entry.data[PRECISION], telegram_specs) for name, icon, obis in elements
     ]
 
     # Add derivative entities
     entities += [
-        DerivativeDSMREntity(name, icon, obis, entry.data[PRECISION], telegram_specs) for name, icon, obis in derivative_elements
+        DerivativeSmartmeterEntity(name, icon, obis, entry.data[PRECISION], telegram_specs) for name, icon, obis in derivative_elements
     ]
 
     async_add_entities(entities)
@@ -101,7 +101,7 @@ async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry, async_a
     hass.async_create_task(mqtt.async_subscribe(entry.data[TOPIC], telegram_callback, 0))
 
 
-class DSMREntity(DSMRDevice, RestoreEntity):
+class SmartmeterEntity(SmartmeterDevice, RestoreEntity):
     def __init__(self, name, icon, obis, precision, telegram_specs):
         # Initialize the sensor
         self._name = name
@@ -114,7 +114,7 @@ class DSMREntity(DSMRDevice, RestoreEntity):
         self._telegram = ''
         self._state = '-'
 
-    def get_dsmr_object_attr(self, attribute):
+    def get_smartmeter_object_attr(self, attribute):
         # Read attribute from last received telegram for this DSMR object
         # Make sure telegram contains an object for this entities obis
 
@@ -145,11 +145,11 @@ class DSMREntity(DSMRDevice, RestoreEntity):
     def state(self):
         # Return the state of sensor, if available, translate if needed
         try:
-            value = self.get_dsmr_object_attr('value')
+            value = self.get_smartmeter_object_attr('value')
         except:
             return '-'
 
-        if self._name == 'Smartmeter Reader Power Consumption (both)':
+        if self._name == 'Smartmeter Power Consumption (both)':
             value = value + self._telegram[obis_ref.ELECTRICITY_USED_TARIFF_2].value
         elif self._obis == obis_ref.ELECTRICITY_ACTIVE_TARIFF:
             return self.translate_tariff(value)
@@ -168,7 +168,7 @@ class DSMREntity(DSMRDevice, RestoreEntity):
     def unit_of_measurement(self):
         # Return the unit of measurement of this entity, if any
         try:
-            return self.get_dsmr_object_attr('unit')
+            return self.get_smartmeter_object_attr('unit')
         except Exception:
             pass
 
@@ -185,7 +185,7 @@ class DSMREntity(DSMRDevice, RestoreEntity):
         return None
 
 
-class DerivativeDSMREntity(DSMREntity):
+class DerivativeSmartmeterEntity(SmartmeterEntity):
     # Calculated derivative for values where the DSMR doesn't offer one.
     # Gas readings are only reported per hour and don't offer a rate only
     # the current meter reading. This entity converts subsequents readings
@@ -216,11 +216,11 @@ class DerivativeDSMREntity(DSMREntity):
         # new rate for the previous hour.
 
         # check if the timestamp for the object differs from the previous one
-        timestamp = self.get_dsmr_object_attr('datetime')
+        timestamp = self.get_smartmeter_object_attr('datetime')
         timestamp = timestamp.astimezone(AMS_TIMEZONE)
 
         if timestamp and timestamp != self._previous_timestamp:
-            current_reading = self.get_dsmr_object_attr('value')
+            current_reading = self.get_smartmeter_object_attr('value')
 
             if self._previous_reading is None:
                 # Can't calculate rate without previous datapoint
@@ -232,7 +232,7 @@ class DerivativeDSMREntity(DSMREntity):
                 timediff = timestamp - self._previous_timestamp
                 total_seconds = timediff.total_seconds()
 
-                if self._name == 'Smartmeter Reader Hourly Gas Consumption':
+                if self._name == 'Smartmeter Hourly Gas Consumption':
                     self._state = round(float(diff) / total_seconds * 3600, self._precision)
                 else:
                     self._state = timestamp.strftime('%X')
@@ -244,9 +244,9 @@ class DerivativeDSMREntity(DSMREntity):
     def unit_of_measurement(self):
         """Return the unit of measurement of this entity, per hour, if any."""
         try:
-            unit = self.get_dsmr_object_attr("unit")
+            unit = self.get_smartmeter_object_attr("unit")
 
-            if self._name == 'Smartmeter Reader Hourly Gas Consumption' and unit:
+            if self._name == 'Smartmeter Hourly Gas Consumption' and unit:
                 return f"{unit}/h"
         except:
             return ""
