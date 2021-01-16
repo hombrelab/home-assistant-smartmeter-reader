@@ -1,6 +1,6 @@
-#  Copyright (c) 2020 Hombrelab <me@hombrelab.com>
+#  Copyright (c) 2021 Hombrelab <me@hombrelab.com>
 
-# Sensor for the Dutch Smart Meter Reader component.
+# Sensor for the Smartmeter Reader component.
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.typing import HomeAssistantType
@@ -52,7 +52,7 @@ async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry, async_a
     elements = ENTITIES
     elements += [
         [
-            'Dutch Smart Meter Reader Gas Consumption',
+            'Smartmeter Reader Gas Consumption',
             'mdi:fire',
             gas_obis
         ],
@@ -60,12 +60,12 @@ async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry, async_a
 
     derivative_elements = [
         [
-            'Dutch Smart Meter Reader Hourly Gas Consumption',
+            'Smartmeter Reader Hourly Gas Consumption',
             'mdi:fire',
             gas_obis
         ],
         [
-            'Dutch Smart Meter Reader Hourly Gas Last Update',
+            'Smartmeter Reader Hourly Gas Last Update',
             'mdi:update',
             gas_obis
         ],
@@ -149,7 +149,7 @@ class DSMREntity(DSMRDevice, RestoreEntity):
         except:
             return '-'
 
-        if self._name == 'Dutch Smart Meter Reader Power Consumption (both)':
+        if self._name == 'Smartmeter Reader Power Consumption (both)':
             value = value + self._telegram[obis_ref.ELECTRICITY_USED_TARIFF_2].value
         elif self._obis == obis_ref.ELECTRICITY_ACTIVE_TARIFF:
             return self.translate_tariff(value)
@@ -232,7 +232,7 @@ class DerivativeDSMREntity(DSMREntity):
                 timediff = timestamp - self._previous_timestamp
                 total_seconds = timediff.total_seconds()
 
-                if self._name == 'Dutch Smart Meter Reader Hourly Gas Consumption':
+                if self._name == 'Smartmeter Reader Hourly Gas Consumption':
                     self._state = round(float(diff) / total_seconds * 3600, self._precision)
                 else:
                     self._state = timestamp.strftime('%X')
@@ -246,7 +246,7 @@ class DerivativeDSMREntity(DSMREntity):
         try:
             unit = self.get_dsmr_object_attr("unit")
 
-            if self._name == 'Dutch Smart Meter Reader Hourly Gas Consumption' and unit:
+            if self._name == 'Smartmeter Reader Hourly Gas Consumption' and unit:
                 return f"{unit}/h"
         except:
             return ""

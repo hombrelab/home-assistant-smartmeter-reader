@@ -1,5 +1,5 @@
 {
-  "title": "Dutch Smart Meter Reader (MQTT)",
+  "title": "Smartmeter Reader (MQTT)",
   "config": {
     "step": {
       "user": {

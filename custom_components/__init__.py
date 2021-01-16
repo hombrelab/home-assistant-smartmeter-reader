@@ -1,6 +1,6 @@
-#  Copyright (c) 2020 Hombrelab <me@hombrelab.com>
+#  Copyright (c) 2021 Hombrelab <me@hombrelab.com>
 
-# The Dutch Smart Meter Reader component for Home Assistant.
+# The Smartmeter Reader component for Home Assistant.
 
 import asyncio
 import logging
