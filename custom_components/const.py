@@ -14,7 +14,7 @@ SERVICE = "consume"
 SW_MANUFACTURER = "Hombrelab"
 SW_NAME = "Smartmeter Reader"
 SW_MODEL = "websocket"
-SW_VERSION = "2.0.001"
+SW_VERSION = "2.0.002"
 
 # config keys
 DSMRVERSION = 'dsmrversion'
