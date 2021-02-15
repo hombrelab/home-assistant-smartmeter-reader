@@ -7,14 +7,14 @@ from homeassistant.helpers import config_validation as cv
 DOMAIN = "smartmeter"
 UUID = "428c5946-7a5a-488b-bda3-9a5cdbcd506b"
 
-TITLE = "Home"
-
-SERVICE = "consume"
-
 SW_MANUFACTURER = "Hombrelab"
 SW_NAME = "Smartmeter Reader"
 SW_MODEL = "websocket"
-SW_VERSION = "2.0.002"
+SW_VERSION = "2.0.003"
+
+TITLE = "Home"
+
+SERVICE = "consume"
 
 # config keys
 DSMRVERSION = 'dsmrversion'

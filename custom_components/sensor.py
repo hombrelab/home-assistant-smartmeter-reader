@@ -138,7 +138,6 @@ class ElecticityEntity(SmartmeterDevice, RestoreEntity):
             try:
                 self._state = state.state
                 self._attributes = state.attributes
-                _LOGGER.error(f"{self._state} {self._attributes}")
             except ValueError as err:
                 _LOGGER.warning(f"could not restore {self.name}: {err}")
 
@@ -166,37 +165,38 @@ class ElecticityEntity(SmartmeterDevice, RestoreEntity):
             self._data = data
             self._telegram = self._parser.parse(data)
 
-            try:
-                self._unit = self.get_attribute('unit')
+    def update(self):
+        try:
+            self._unit = self.get_attribute('unit')
 
-                if self.name == 'Smartmeter Hourly Gas Consumption' and self._unit:
-                    self._unit = f"{self._unit}/h"
-            except Exception:
-                self._unit = ''
+            if self.name == 'Smartmeter Hourly Gas Consumption' and self._unit:
+                self._unit = f"{self._unit}/h"
+        except Exception:
+            self._unit = ''
 
-            try:
-                value = self.get_attribute('value')
-            except:
-                self._state = '-'
+        try:
+            value = self.get_attribute('value')
+        except:
+            self._state = '-'
 
-                return
+            return
 
-            if self.name == 'Smartmeter Power Consumption (both)':
-                value = value + self._telegram[obis_ref.ELECTRICITY_USED_TARIFF_2].value
-            elif self._obis == obis_ref.ELECTRICITY_ACTIVE_TARIFF:
-                self._state = self.translate_tariff(value)
+        if self.name == 'Smartmeter Power Consumption (both)':
+            value = value + self._telegram[obis_ref.ELECTRICITY_USED_TARIFF_2].value
+        elif self._obis == obis_ref.ELECTRICITY_ACTIVE_TARIFF:
+            self._state = self.translate_tariff(value)
 
-                return
+            return
 
-            try:
-                value = round(float(value), self._precision)
-            except TypeError:
-                pass
+        try:
+            value = round(float(value), self._precision)
+        except TypeError:
+            pass
 
-            if value is not None:
-                self._state = value
-            else:
-                self._state = '-'
+        if value is not None:
+            self._state = value
+        else:
+            self._state = '-'
 
     @property
     def unique_id(self) -> str:
@@ -239,12 +239,7 @@ class GasEntity(ElecticityEntity):
         self._previous_state = None
         self._previous_timestamp = None
 
-    def set_consumed(self, data):
-        """set the telegram for the gas reading"""
-        super().set_consumed(data)
-
-        self._data = data
-
+    def update(self):
         if 'previous_state' in self._attributes:
             self._previous_state = self._attributes['previous_state']
             self._previous_timestamp = self._attributes['previous_timestamp']
@@ -257,22 +252,24 @@ class GasEntity(ElecticityEntity):
             state = self.get_attribute('value')
 
             if timestamp is not None and timestamp != self._previous_timestamp:
-                if self._previous_state is not None:
-                    diff = state - self._previous_state
-                    timediff = timestamp - self._previous_timestamp
-                    total_seconds = timediff.total_seconds()
+                _LOGGER.error(f"{self._name} {self._previous_state}")
+                if self._previous_state is None:
+                    self._previous_state = state
+                    self._previous_timestamp = timestamp
 
-                    if self.name == 'Smartmeter Hourly Gas Consumption':
-                        self._state = round(float(diff) / total_seconds * 3600, self._precision)
-                    else:
-                        self._state = timestamp.strftime('%X')
+                diff = state - self._previous_state
+                timediff = timestamp - self._previous_timestamp
+                total_seconds = timediff.total_seconds()
 
-                self._previous_state = state
+                if self.name == 'Smartmeter Hourly Gas Consumption':
+                    self._state = round(float(diff) / total_seconds * 3600, self._precision)
+                else:
+                    self._state = timestamp.strftime('%X')
+
+                self._previous_state = self._state
                 self._previous_timestamp = timestamp
         else:
             self._state = '-'
-
-        yield from self.async_update_ha_state()
 
     @property
     def device_state_attributes(self):
