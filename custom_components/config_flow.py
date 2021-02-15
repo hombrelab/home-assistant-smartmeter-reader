@@ -1,25 +1,21 @@
 #  Copyright (c) 2021 Hombrelab <me@hombrelab.com>
 
-# Config flow for the Smartmeter Reader component.
-
 import logging
 
-import voluptuous as vol
-
-from homeassistant.components import mqtt
 from homeassistant import config_entries, exceptions
 from homeassistant.config_entries import ConfigFlow
 
 from .const import (
     DOMAIN,
     TITLE,
+
+    CONFIG_SCHEMA,
+
     DSMRVERSION,
     PRECISION,
-    TOPIC,
-    DEFAULT_DSMRVERSION,
-    DEFAULT_PRECISION,
-    DEFAULT_TOPIC,
-    DSMRVERSIONS
+    TIMEZONE,
+
+    DSMRVERSIONS,
 )
 
 _LOGGER = logging.getLogger(__name__)
@@ -48,7 +44,7 @@ class SmartmeterConfigFlow(ConfigFlow, domain=DOMAIN):
         data = {
             DSMRVERSION: user_input[DSMRVERSION],
             PRECISION: user_input[PRECISION],
-            TOPIC: user_input[TOPIC],
+            TIMEZONE: user_input[TIMEZONE],
         }
 
         return self.async_create_entry(
@@ -59,13 +55,7 @@ class SmartmeterConfigFlow(ConfigFlow, domain=DOMAIN):
     async def _show_setup_form(self, errors=None):
         return self.async_show_form(
             step_id="user",
-            data_schema=vol.Schema(
-                {
-                    vol.Required(DSMRVERSION, default=DEFAULT_DSMRVERSION): str,
-                    vol.Required(PRECISION, default=DEFAULT_PRECISION): int,
-                    vol.Required(TOPIC, default=DEFAULT_TOPIC): str,
-                }
-            ),
+            data_schema=CONFIG_SCHEMA.schema[DOMAIN],
             errors=errors or {},
         )
 
@@ -77,7 +67,7 @@ async def is_valid(user_input):
     if user_input[PRECISION] < 0:
         raise ValidationError
 
-    if not user_input[TOPIC].strip():
+    if not user_input[TIMEZONE].strip():
         raise ValidationError
 
 

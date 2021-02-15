@@ -1,11 +1,11 @@
 {
-  "domain": "smartmeter_reader",
-  "name": "Smartmeter Reader (MQTT)",
+  "domain": "smartmeter",
+  "name": "Smartmeter Reader",
+  "version": "2.0.001",
   "config_flow": true,
   "documentation": "https://github.com/hombrelab/home-assistant-smartmeter-reader/",
-  "dependencies": [
-    "mqtt"
-  ],
+  "issue_tracker": "https://github.com/hombrelab/home-assistant-smartmeter-reader/issues",
+  "dependencies": [],
   "after_dependencies": [],
   "codeowners": [
     "@hombrelab"

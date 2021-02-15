@@ -1,11 +1,11 @@
 {
   "config": {
     "abort": {
-      "already_configured": "[%key:common::config_flow::abort::already_configured_device%]"
+      "already_configured": "The Smartmeter Reader is already configured",
+      "single_instance_allowed": "Only a single configuration of Smartmeter Reader is allowed."
     },
     "error": {
       "name_error": "This name is already in use!",
-      "connection_error": "Failed to connect MQTT (is it enabled).",
       "variables_error": "One or more variables have not been set up (correct)."
     },
     "step": {
@@ -14,7 +14,7 @@
         "data": {
           "dsmrversion": "DSMR Version",
           "precision": "Precision",
-          "topic": "Topic"
+          "timezone": "Timezone"
         }
       }
     }

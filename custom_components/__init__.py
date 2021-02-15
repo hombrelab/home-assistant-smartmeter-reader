@@ -1,11 +1,7 @@
 #  Copyright (c) 2021 Hombrelab <me@hombrelab.com>
 
-# The Smartmeter Reader component for Home Assistant.
-
 import asyncio
 import logging
-
-import voluptuous as vol
 
 from homeassistant.config_entries import ConfigEntry
 from homeassistant.helpers.typing import ConfigType, HomeAssistantType
@@ -13,12 +9,15 @@ from homeassistant.helpers.typing import ConfigType, HomeAssistantType
 from .const import (
     DOMAIN,
     UUID,
+
     SW_MANUFACTURER,
     SW_NAME,
-    SW_VERSION
-)
+    SW_MODEL,
+    SW_VERSION,
 
-CONFIG_SCHEMA = vol.Schema({DOMAIN: vol.Schema({})}, extra=vol.ALLOW_EXTRA)
+    SERVICE,
+    ENTITIES_SCHEMA,
+)
 
 PLATFORMS = ["sensor"]
 
@@ -26,19 +25,20 @@ _LOGGER = logging.getLogger(__name__)
 
 
 async def async_setup(hass: HomeAssistantType, config: ConfigType):
-    """Set up component"""
+    """set up component"""
     hass.data[DOMAIN] = {}
 
     if DOMAIN not in config:
         return True
+
+    hass.data[DOMAIN] = config
 
     return True
 
 
 async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry):
     """Load config entries"""
-
-    hass.data[DOMAIN][entry.entry_id] = "1531923f-ed21-4e72-8def-a7e900c71c8e"
+    hass.data[DOMAIN][entry.entry_id] = UUID
 
     for component in PLATFORMS:
         hass.async_create_task(
@@ -48,8 +48,8 @@ async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry):
     return True
 
 
-async def async_unload_entry(hass: HomeAssistantType, entry: ConfigType):
-    """Unload config entries"""
+async def async_unload_entry(hass: HomeAssistantType, entry: ConfigEntry):
+    """unload config entries"""
     unload_ok = all(
         await asyncio.gather(
             *[
@@ -68,14 +68,16 @@ async def async_unload_entry(hass: HomeAssistantType, entry: ConfigType):
 class SmartmeterDevice():
     @property
     def device_info(self):
-        """Return device information"""
+        """return device information"""
         return {
             "identifiers": {
-                (DOMAIN,
-                 UUID)
+                (
+                    DOMAIN,
+                    UUID,
+                )
             },
             "name": SW_NAME,
             "manufacturer": SW_MANUFACTURER,
-            "model": "",
+            "model": SW_MODEL,
             "sw_version": SW_VERSION,
         }

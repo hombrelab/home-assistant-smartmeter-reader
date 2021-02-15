@@ -1,176 +1,152 @@
 #  Copyright (c) 2021 Hombrelab <me@hombrelab.com>
 
-# Sensor for the Smartmeter Reader component.
-
-from homeassistant.config_entries import ConfigEntry
-from homeassistant.helpers.typing import HomeAssistantType
-from homeassistant.helpers.restore_state import RestoreEntity
-
+import asyncio
 import logging
 
+import pytz
+from dsmr_parser import obis_references as obis_ref
 from dsmr_parser import telegram_specifications
 from dsmr_parser.parsers import TelegramParser
-from dsmr_parser import obis_references as obis_ref
+from homeassistant.config_entries import ConfigEntry
+from homeassistant.helpers.restore_state import RestoreEntity
+from homeassistant.helpers.typing import HomeAssistantType
+
+from . import SmartmeterDevice
+from .const import (
+    DOMAIN,
+    UUID,
+
+    SERVICE,
+
+    DSMRVERSION,
+    PRECISION,
+    TIMEZONE,
+
+    ENTITIES,
+    ENTITIES_SCHEMA,
+)
 
 _LOGGER = logging.getLogger(__name__)
 
-from . import SmartmeterDevice
-
-from .const import (
-    UUID,
-    DSMRVERSION,
-    PRECISION,
-    TOPIC,
-    AMS_TIMEZONE,
-    ENTITIES
-)
-
 
 async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry, async_add_entities):
-    """Set up entities based on a config entry."""
+    """set up entities based on a config entry"""
 
-    # Connect to MQTT Topic
-    mqtt = hass.components.mqtt
-
-    dsmr_version = entry.data[DSMRVERSION]
+    _version = entry.data[DSMRVERSION]
+    _precision = entry.data[PRECISION]
+    _timezone = pytz.timezone(entry.data[TIMEZONE])
 
     # Protocol version specific obis
-    if dsmr_version in "4":
-        gas_obis = obis_ref.HOURLY_GAS_METER_READING
-        telegram_specs = telegram_specifications.V4
-    elif dsmr_version in "5":
-        gas_obis = obis_ref.HOURLY_GAS_METER_READING
-        telegram_specs = telegram_specifications.V5
-    elif dsmr_version in ("5B",):
-        gas_obis = obis_ref.BELGIUM_HOURLY_GAS_METER_READING
-        telegram_specs = telegram_specifications.BELGIUM_FLUVIUS
+    if _version in "4":
+        _gas_obis = obis_ref.HOURLY_GAS_METER_READING
+        _parser = TelegramParser(telegram_specifications.V4)
+    elif _version in "5":
+        _gas_obis = obis_ref.HOURLY_GAS_METER_READING
+        _parser = TelegramParser(telegram_specifications.V5)
+    elif _version in ("5B",):
+        _gas_obis = obis_ref.BELGIUM_HOURLY_GAS_METER_READING
+        _parser = TelegramParser(telegram_specifications.BELGIUM_FLUVIUS)
     else:
-        gas_obis = obis_ref.GAS_METER_READING
-        telegram_specs = telegram_specifications.V2_2
+        _gas_obis = obis_ref.GAS_METER_READING
+        _parser = TelegramParser(telegram_specifications.V2_2)
 
-    # Define list of name,obis mappings to generate entities
+    # Define mapping for electricity mappings
     elements = ENTITIES
     elements += [
         [
             'Smartmeter Gas Consumption',
             'mdi:fire',
-            gas_obis
+            _gas_obis
         ],
     ]
 
-    derivative_elements = [
+    # generate smart entities
+    entities = [
+        ElecticityEntity(name, icon, obis, _precision, _timezone, _parser)
+            for name, icon, obis in elements
+    ]
+
+    elements = [
         [
             'Smartmeter Hourly Gas Consumption',
             'mdi:fire',
-            gas_obis
+            _gas_obis
         ],
         [
             'Smartmeter Hourly Gas Last Update',
             'mdi:update',
-            gas_obis
+            _gas_obis
         ],
     ]
 
-    # Generate device entities
-    entities = [
-        SmartmeterEntity(name, icon, obis, entry.data[PRECISION], telegram_specs) for name, icon, obis in elements
-    ]
-
-    # Add derivative entities
+    # generate gas entities
     entities += [
-        DerivativeSmartmeterEntity(name, icon, obis, entry.data[PRECISION], telegram_specs) for name, icon, obis in derivative_elements
+        GasEntity(name, icon, obis, _precision, _timezone, _parser)
+            for name, icon, obis in elements
     ]
 
+    # Set up the sensor platform
     async_add_entities(entities)
 
-    def update_entities_telegram(telegram):
-        _LOGGER.debug(telegram)
+    async def async_consume_service(call):
+        """handle calls to the service."""
+        telegram = call.data.get('telegram')
+        telegram = telegram.replace(" ", "")
+        telegram = telegram.replace("\\r\\n", "\r\n")
 
-        # Make all device entities aware of the new telegram
         for entity in entities:
-            entity.setTelegram(telegram)
+            entity.set_consumed(telegram)
 
-            hass.async_create_task(entity.async_update_ha_state())
-
-    # Call MQTT subscribe function
-    def telegram_callback(message):
-        # Call callback
-        if message is not None:
-            update_entities_telegram(message.payload)
-
-    hass.async_create_task(mqtt.async_subscribe(entry.data[TOPIC], telegram_callback, 0))
+    hass.services.async_register(
+        DOMAIN,
+        SERVICE,
+        async_consume_service,
+        schema=ENTITIES_SCHEMA,
+    )
 
 
-class SmartmeterEntity(SmartmeterDevice, RestoreEntity):
-    def __init__(self, name, icon, obis, precision, telegram_specs):
-        # Initialize the sensor
+class ElecticityEntity(SmartmeterDevice, RestoreEntity):
+    """representation of a electricity entity"""
+
+    def __init__(self, name, icon, obis, precision, timezone, parser):
+        """initialize the electricity entity"""
         self._name = name
         self._icon = icon
         self._obis = obis
+        self._element = self._name.lower().replace(" ", "_")
+
+        self._unit = ''
+
+        self._obis = obis
         self._precision = precision
-        self._parser = TelegramParser(telegram_specs)
+        self._timezone = timezone
+        self._parser = parser
 
-        self._raw = ''
+        self._data = ''
         self._telegram = ''
+
         self._state = '-'
+        self._attributes = {}
 
-    def get_smartmeter_object_attr(self, attribute):
-        # Read attribute from last received telegram for this DSMR object
-        # Make sure telegram contains an object for this entities obis
+    async def async_added_to_hass(self):
+        """run when entity is about to be added"""
+        await super().async_added_to_hass()
 
-        # Get the attribute value if the object has it
-        dsmr_object = self._telegram[self._obis]
+        state = await self.async_get_last_state()
 
-        return getattr(dsmr_object, attribute, None)
+        if state:
+            try:
+                self._state = state.state
+                self._attributes = state.attributes
+                _LOGGER.error(f"{self._state} {self._attributes}")
+            except ValueError as err:
+                _LOGGER.warning(f"could not restore {self.name}: {err}")
 
-    def setTelegram(self, telegram):
-        self._raw = telegram
-        self._telegram = self._parser.parse(self._raw)
+    def get_attribute(self, name):
+        """get the attribute value if the object has it"""
+        attribute = self._telegram[self._obis]
 
-    @property
-    def unique_id(self) -> str:
-        """Return the unique ID for this sensor."""
-        return f"{UUID}.sensor.{self._name}"
-
-    @property
-    def name(self):
-        # Return the name of the sensor
-        return self._name
-
-    @property
-    def icon(self):
-        return self._icon
-
-    @property
-    def state(self):
-        # Return the state of sensor, if available, translate if needed
-        try:
-            value = self.get_smartmeter_object_attr('value')
-        except:
-            return '-'
-
-        if self._name == 'Smartmeter Power Consumption (both)':
-            value = value + self._telegram[obis_ref.ELECTRICITY_USED_TARIFF_2].value
-        elif self._obis == obis_ref.ELECTRICITY_ACTIVE_TARIFF:
-            return self.translate_tariff(value)
-
-        try:
-            value = round(float(value), self._precision)
-        except TypeError:
-            pass
-
-        if value is not None:
-            return value
-
-        return '-'
-
-    @property
-    def unit_of_measurement(self):
-        # Return the unit of measurement of this entity, if any
-        try:
-            return self.get_smartmeter_object_attr('unit')
-        except Exception:
-            pass
+        return getattr(attribute, name, None)
 
     @staticmethod
     def translate_tariff(value):
@@ -184,87 +160,121 @@ class SmartmeterEntity(SmartmeterDevice, RestoreEntity):
 
         return None
 
+    def set_consumed(self, data):
+        """set the telegram for the electricity reading"""
+        if data is not None:
+            self._data = data
+            self._telegram = self._parser.parse(data)
 
-class DerivativeSmartmeterEntity(SmartmeterEntity):
-    # Calculated derivative for values where the DSMR doesn't offer one.
-    # Gas readings are only reported per hour and don't offer a rate only
-    # the current meter reading. This entity converts subsequents readings
-    # into a hourly rate.
+            try:
+                self._unit = self.get_attribute('unit')
 
-    def __init__(self, name, icon, obis, precision, telegram_specs):
-        super().__init__(name, icon, obis, precision, telegram_specs)
+                if self.name == 'Smartmeter Hourly Gas Consumption' and self._unit:
+                    self._unit = f"{self._unit}/h"
+            except Exception:
+                self._unit = ''
 
-        self._previous_reading = None
-        self._previous_timestamp = None
-        self._state = None
+            try:
+                value = self.get_attribute('value')
+            except:
+                self._state = '-'
 
-    @property
-    def device_state_attributes(self):
-        return {'raw': self._raw}
+                return
 
-    @property
-    def state(self):
-        # Return the calculated current hourly rate
-        return self._state
+            if self.name == 'Smartmeter Power Consumption (both)':
+                value = value + self._telegram[obis_ref.ELECTRICITY_USED_TARIFF_2].value
+            elif self._obis == obis_ref.ELECTRICITY_ACTIVE_TARIFF:
+                self._state = self.translate_tariff(value)
 
-    async def async_update(self):
-        # Recalculate hourly rate if timestamp has changed.
+                return
 
-        # DSMR updates gas meter reading every hour. Along with the new
-        # value a timestamp is provided for the reading. Test if the last
-        # known timestamp differs from the current one then calculate a
-        # new rate for the previous hour.
-
-        # check if the timestamp for the object differs from the previous one
-        timestamp = self.get_smartmeter_object_attr('datetime')
-        timestamp = timestamp.astimezone(AMS_TIMEZONE)
-
-        if timestamp and timestamp != self._previous_timestamp:
-            current_reading = self.get_smartmeter_object_attr('value')
-
-            if self._previous_reading is None:
-                # Can't calculate rate without previous datapoint
-                # just store current point
+            try:
+                value = round(float(value), self._precision)
+            except TypeError:
                 pass
+
+            if value is not None:
+                self._state = value
             else:
-                # Recalculate the rate
-                diff = current_reading - self._previous_reading
-                timediff = timestamp - self._previous_timestamp
-                total_seconds = timediff.total_seconds()
+                self._state = '-'
 
-                if self._name == 'Smartmeter Hourly Gas Consumption':
-                    self._state = round(float(diff) / total_seconds * 3600, self._precision)
-                else:
-                    self._state = timestamp.strftime('%X')
+    @property
+    def unique_id(self) -> str:
+        """return the unique id"""
+        return f"{UUID}.{self._element}"
 
-            self._previous_reading = current_reading
-            self._previous_timestamp = timestamp
+    @property
+    def name(self) -> str:
+        """return the name of the entity"""
+        return self._name
+
+    @property
+    def icon(self) -> str:
+        """return the icon to be used for this entity"""
+        return self._icon
 
     @property
     def unit_of_measurement(self):
-        """Return the unit of measurement of this entity, per hour, if any."""
-        try:
-            unit = self.get_smartmeter_object_attr("unit")
+        """return the unit of measurement"""
+        return self._unit
 
-            if self._name == 'Smartmeter Hourly Gas Consumption' and unit:
-                return f"{unit}/h"
-        except:
-            return ""
+    @property
+    def state(self):
+        """return the state of the entity"""
+        return self._state
 
-    async def async_added_to_hass(self):
-        await super().async_added_to_hass()
+    @property
+    def state_attributes(self):
+        """return the state attributes"""
+        return {'data': self._data}
 
-        state = await self.async_get_last_state()
 
-        if state:
-            try:
-                self._raw = state.attributes['raw']
+class GasEntity(ElecticityEntity):
+    """representation of a gas entity"""
 
-                if self._raw:
-                    self._telegram = self._parser.parse(self._raw)
-                    self._state = state.state
-                else:
-                    self._telegram = ''
-                    self._state = '-'
-            except ValueError as err:
-                _LOGGER.warning("Could not restore last state: %s", err)
+    def __init__(self, name, icon, obis, precision, timezone, parser):
+        """initialize the gas entity"""
+        super().__init__(name, icon, obis, precision, timezone, parser)
+
+        self._previous_state = None
+        self._previous_timestamp = None
+
+    def set_consumed(self, data):
+        """set the telegram for the gas reading"""
+        super().set_consumed(data)
+
+        self._data = data
+
+        if 'previous_state' in self._attributes:
+            self._previous_state = self._attributes['previous_state']
+            self._previous_timestamp = self._attributes['previous_timestamp']
+
+        # check if the timestamp for the object differs from the previous one
+        if self._telegram != '':
+            timestamp = self.get_attribute('datetime')
+            timestamp = timestamp.astimezone(self._timezone)
+
+            state = self.get_attribute('value')
+
+            if timestamp is not None and timestamp != self._previous_timestamp:
+                if self._previous_state is not None:
+                    diff = state - self._previous_state
+                    timediff = timestamp - self._previous_timestamp
+                    total_seconds = timediff.total_seconds()
+
+                    if self.name == 'Smartmeter Hourly Gas Consumption':
+                        self._state = round(float(diff) / total_seconds * 3600, self._precision)
+                    else:
+                        self._state = timestamp.strftime('%X')
+
+                self._previous_state = state
+                self._previous_timestamp = timestamp
+        else:
+            self._state = '-'
+
+        yield from self.async_update_ha_state()
+
+    @property
+    def device_state_attributes(self):
+        """return the state attributes"""
+        return {'data': self._data, 'previous_state': self._previous_state, 'previous_timestamp': self._previous_timestamp}

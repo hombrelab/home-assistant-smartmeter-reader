@@ -1,32 +1,30 @@
 #  Copyright (c) 2021 Hombrelab <me@hombrelab.com>
 
-# Constants for the Smartmeter Reader component
-
-import pytz
-
+import voluptuous as vol
 from dsmr_parser import obis_references as obis_ref
-from datetime import timedelta
+from homeassistant.helpers import config_validation as cv
 
-DOMAIN = "smartmeter_reader"
-UUID = "1531923f-ed21-4e72-8def-a7e900c71c8e"
-
-SW_MANUFACTURER = "Hombrelab"
-SW_NAME = "Smartmeter Reader"
-SW_VERSION = "2.0.000"
+DOMAIN = "smartmeter"
+UUID = "428c5946-7a5a-488b-bda3-9a5cdbcd506b"
 
 TITLE = "Home"
 
-# labels
+SERVICE = "consume"
+
+SW_MANUFACTURER = "Hombrelab"
+SW_NAME = "Smartmeter Reader"
+SW_MODEL = "websocket"
+SW_VERSION = "2.0.001"
+
+# config keys
 DSMRVERSION = 'dsmrversion'
 PRECISION = 'precision'
-TOPIC = "topic"
+TIMEZONE = 'timezone'
 
-# default values
-DEFAULT_DSMRVERSION = "2.2"
-DEFAULT_PRECISION = 3
-DEFAULT_TOPIC = "home-assistant/smartmeter/telegram"
-
-AMS_TIMEZONE = pytz.timezone("Europe/Amsterdam")
+# config values
+DSMRVERSION_VALUE = "2.2"
+PRECISION_VALUE = 3
+TIMEZONE_VALUE = "Europe/Amsterdam"
 
 DSMRVERSIONS = [
     "5B",
@@ -173,3 +171,22 @@ ENTITIES = [
         obis_ref.ELECTRICITY_USED_TARIFF_1
     ],
 ]
+
+ENTITIES_SCHEMA = vol.Schema(
+    {
+        vol.Required('telegram'): cv.string,
+    }
+)
+
+CONFIG_SCHEMA = vol.Schema(
+    {
+        DOMAIN: vol.Schema(
+            {
+                vol.Required(DSMRVERSION, default=DSMRVERSION_VALUE): cv.string,
+                vol.Required(PRECISION, default=PRECISION_VALUE): int,
+                vol.Required(TIMEZONE, default=TIMEZONE_VALUE): cv.string,
+            }
+        )
+    },
+    extra=vol.ALLOW_EXTRA
+)
