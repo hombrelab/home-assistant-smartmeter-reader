@@ -10,7 +10,7 @@ UUID = "428c5946-7a5a-488b-bda3-9a5cdbcd506b"
 SW_MANUFACTURER = "Hombrelab"
 SW_NAME = "Smartmeter Reader"
 SW_MODEL = "websocket"
-SW_VERSION = "2.0.003"
+SW_VERSION = "2.0.004"
 
 TITLE = "Home"
 
