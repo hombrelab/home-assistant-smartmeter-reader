@@ -144,7 +144,7 @@ class ElecticityEntity(SmartmeterDevice, RestoreEntity):
                 self._data = self._attributes['data']
                 self._telegram = self._parser.parse(self._data)
             except Exception as err:
-                _LOGGER.warning(f"could not restore {self.name}: {err}")
+                _LOGGER.warning(f"could not restore {self._name}: {err}")
 
     def get_attribute(self, name):
         """get the attribute value if the object has it"""
@@ -264,10 +264,16 @@ class GasEntity(ElecticityEntity):
             timestamp = ''
 
         if self._previous_state is None:
-            self._previous_state = self._attributes['previous_state']
+            try:
+                self._previous_state = self._attributes['previous_state']
+            except:
+                self._previous_state = 0
 
         if self._previous_timestamp is None:
-            self._previous_timestamp = self._attributes['previous_timestamp']
+            try:
+                self._previous_timestamp = self._attributes['previous_timestamp']
+            except:
+                self._previous_timestamp = ''
 
         # check if the timestamp for the object differs from the previous one
         if self.name == GAS_HOURLY_CONSUMPTION_NAME:
