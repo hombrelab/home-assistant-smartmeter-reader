@@ -10,7 +10,7 @@ UUID = "428c5946-7a5a-488b-bda3-9a5cdbcd506b"
 SW_MANUFACTURER = "Hombrelab"
 SW_NAME = "Smartmeter Reader"
 SW_MODEL = "websocket"
-SW_VERSION = "2.0.004"
+SW_VERSION = "2.0.005"
 
 TITLE = "Home"
 
@@ -32,6 +32,10 @@ DSMRVERSIONS = [
     "4",
     "2.2"
 ]
+
+GAS_CONSUMPTION_NAME = 'Smartmeter Gas Consumption'
+GAS_HOURLY_CONSUMPTION_NAME = 'Smartmeter Hourly Gas Consumption'
+GAS_HOURLY_LAST_UPDATE_NAME = 'Smartmeter Hourly Gas Last Update'
 
 # list of entities
 ENTITIES = [

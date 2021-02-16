@@ -22,6 +22,10 @@ from .const import (
     PRECISION,
     TIMEZONE,
 
+    GAS_CONSUMPTION_NAME,
+    GAS_HOURLY_CONSUMPTION_NAME,
+    GAS_HOURLY_LAST_UPDATE_NAME,
+
     ENTITIES,
     ENTITIES_SCHEMA,
 )
@@ -54,7 +58,7 @@ async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry, async_a
     elements = ENTITIES
     elements += [
         [
-            'Smartmeter Gas Consumption',
+            GAS_CONSUMPTION_NAME,
             'mdi:fire',
             _gas_obis
         ],
@@ -68,12 +72,12 @@ async def async_setup_entry(hass: HomeAssistantType, entry: ConfigEntry, async_a
 
     elements = [
         [
-            'Smartmeter Hourly Gas Consumption',
+            GAS_HOURLY_CONSUMPTION_NAME,
             'mdi:fire',
             _gas_obis
         ],
         [
-            'Smartmeter Hourly Gas Last Update',
+            GAS_HOURLY_LAST_UPDATE_NAME,
             'mdi:update',
             _gas_obis
         ],
@@ -138,6 +142,8 @@ class ElecticityEntity(SmartmeterDevice, RestoreEntity):
             try:
                 self._state = state.state
                 self._attributes = state.attributes
+                self._data = self._attributes['data']
+                self._telegram = self._parser.parse(self._data)
             except ValueError as err:
                 _LOGGER.warning(f"could not restore {self.name}: {err}")
 
@@ -163,14 +169,11 @@ class ElecticityEntity(SmartmeterDevice, RestoreEntity):
         """set the telegram for the electricity reading"""
         if data is not None:
             self._data = data
-            self._telegram = self._parser.parse(data)
+            self._telegram = self._parser.parse(self._data)
 
     def update(self):
         try:
             self._unit = self.get_attribute('unit')
-
-            if self.name == 'Smartmeter Hourly Gas Consumption' and self._unit:
-                self._unit = f"{self._unit}/h"
         except Exception:
             self._unit = ''
 
@@ -240,36 +243,52 @@ class GasEntity(ElecticityEntity):
         self._previous_timestamp = None
 
     def update(self):
-        if 'previous_state' in self._attributes:
+        try:
+            if self._name == GAS_HOURLY_CONSUMPTION_NAME:
+                self._unit = f"{self.get_attribute('unit')}/h"
+            elif self._name == GAS_HOURLY_LAST_UPDATE_NAME:
+                self._unit = ''
+        except Exception:
+            self._unit = ''
+
+        try:
+            value = self.get_attribute('value')
+        except:
+            self._state = '-'
+
+            return
+
+        try:
+            timestamp = self.get_attribute('datetime')
+            timestamp = timestamp.astimezone(self._timezone)
+        except:
+            timestamp = ''
+
+        if self._previous_state is None:
             self._previous_state = self._attributes['previous_state']
+
+        if self._previous_timestamp is None:
             self._previous_timestamp = self._attributes['previous_timestamp']
 
         # check if the timestamp for the object differs from the previous one
-        if self._telegram != '':
-            timestamp = self.get_attribute('datetime')
-            timestamp = timestamp.astimezone(self._timezone)
-
-            state = self.get_attribute('value')
-
-            if timestamp is not None and timestamp != self._previous_timestamp:
-                _LOGGER.error(f"{self._name} {self._previous_state}")
-                if self._previous_state is None:
-                    self._previous_state = state
-                    self._previous_timestamp = timestamp
-
-                diff = state - self._previous_state
-                timediff = timestamp - self._previous_timestamp
-                total_seconds = timediff.total_seconds()
-
-                if self.name == 'Smartmeter Hourly Gas Consumption':
-                    self._state = round(float(diff) / total_seconds * 3600, self._precision)
-                else:
-                    self._state = timestamp.strftime('%X')
+        if self.name == GAS_HOURLY_CONSUMPTION_NAME:
+            if timestamp != self._previous_timestamp:
+                try:
+                    self._state = value - self._previous_state
+                    #diff = value - self._previous_state
+                    #timediff = timestamp - self._previous_timestamp
+                    #total_seconds = timediff.total_seconds()
+                    #self._state = round(float(diff) / total_seconds * 3600, self._precision)
+                except:
+                    self._state = 0
 
                 self._previous_state = self._state
                 self._previous_timestamp = timestamp
+            else:
+                self._state = 0
         else:
-            self._state = '-'
+            self._state = timestamp.strftime('%X')
+
 
     @property
     def device_state_attributes(self):

@@ -1,7 +1,7 @@
 {
   "domain": "smartmeter",
   "name": "Smartmeter Reader",
-  "version": "2.0.004",
+  "version": "2.0.005",
   "config_flow": true,
   "documentation": "https://github.com/hombrelab/home-assistant-smartmeter-reader/",
   "issue_tracker": "https://github.com/hombrelab/home-assistant-smartmeter-reader/issues",
