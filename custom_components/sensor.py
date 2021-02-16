@@ -1,6 +1,5 @@
 #  Copyright (c) 2021 Hombrelab <me@hombrelab.com>
 
-import asyncio
 import logging
 
 import pytz
@@ -144,7 +143,7 @@ class ElecticityEntity(SmartmeterDevice, RestoreEntity):
                 self._attributes = state.attributes
                 self._data = self._attributes['data']
                 self._telegram = self._parser.parse(self._data)
-            except ValueError as err:
+            except Exception as err:
                 _LOGGER.warning(f"could not restore {self.name}: {err}")
 
     def get_attribute(self, name):
@@ -174,7 +173,7 @@ class ElecticityEntity(SmartmeterDevice, RestoreEntity):
     def update(self):
         try:
             self._unit = self.get_attribute('unit')
-        except Exception:
+        except:
             self._unit = ''
 
         try:
